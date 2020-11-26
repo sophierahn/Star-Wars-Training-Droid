@@ -20,6 +20,8 @@ blood, sweat, and tears
 
 
 The SBUS library was based on the c++ library written by Bolderflight: https://github.com/bolderflight/SBUS
+It was also very handy to reference this breakdown of FrSky SBUS in making the library: https://os.mbed.com/users/Digixx/notebook/futaba-s-bus-controlled-by-mbed/
+
 The Lidar library was taken from Adafruit: https://github.com/adafruit/Adafruit_CircuitPython_LIDARLite
 The ZED code was taken from their tutorials: https://github.com/stereolabs/zed-examples
 
