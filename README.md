@@ -17,3 +17,12 @@ FrSky X8R Receiver,
 FrSky Taranis Controller,
 ZED 2 Camera,
 blood, sweat, and tears
+
+
+The SBUS library was based on the c++ library written by Bolderflight: https://github.com/bolderflight/SBUS
+The Lidar library was taken from Adafruit: https://github.com/adafruit/Adafruit_CircuitPython_LIDARLite
+The ZED code was taken from their tutorials: https://github.com/stereolabs/zed-examples
+
+This repo requires multiprocessing, cython, numpy, open cv, servokit, and lots else
+
+# BEWARE MEMORY LEAKS
