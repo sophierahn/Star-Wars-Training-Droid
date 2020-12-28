@@ -25,6 +25,8 @@ It was also very handy to reference this breakdown of FrSky SBUS in making the l
 The Lidar library was taken from Adafruit: https://github.com/adafruit/Adafruit_CircuitPython_LIDARLite
 The ZED code was taken from their tutorials: https://github.com/stereolabs/zed-examples
 
+The Navigates file was written by Benjamin Macdonell for use in this project, it handles the PID loop
+
 This repo requires multiprocessing, cython, numpy, open cv, servokit, and lots else
 
-# BEWARE MEMORY LEAKS
+# BEWARE OF MEMORY LEAKS
