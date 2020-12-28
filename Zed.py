@@ -23,6 +23,7 @@ import cv2
 import numpy as np
 from multiprocessing import Pipe
 import time
+import math
 
 def get_color_id_gr(idx):
     id_colors = [(59, 232, 176),
@@ -38,8 +39,13 @@ def get_color_id_gr(idx):
     arr = id_colors[color_idx]
     return arr
 
+
+
+
+
 #add zed_conn
 def zedmain(zed_conn):
+    visualize = True
 
     # Create a Camera object
     zed = sl.Camera()
@@ -49,30 +55,27 @@ def zedmain(zed_conn):
     init_params = sl.InitParameters()
     #consider turning down resolution
     init_params.camera_resolution = sl.RESOLUTION.HD720  # Use HD720 video mode
-    init_params.depth_mode = sl.DEPTH_MODE.PERFORMANCE
     init_params.coordinate_units = sl.UNIT.METER
     init_params.sdk_verbose = True
+    init_params.camera_fps = 15  # Set fps at 15
 
     # Open the camera
     err = zed.open(init_params)
     if err != sl.ERROR_CODE.SUCCESS:
         exit(1)
 
+
+    mat = sl.Mat()
+    runtime_parameters = sl.RuntimeParameters()
+
     obj_param = sl.ObjectDetectionParameters()
     obj_param.enable_tracking=True
     obj_param.image_sync=True
-    obj_param.enable_mask_output=True
 
-
-    mat = sl.Mat()
-    #camera_infos = zed.get_camera_information()
     if obj_param.enable_tracking :
         positional_tracking_param = sl.PositionalTrackingParameters()
-        #positional_tracking_param.set_as_static = True
         positional_tracking_param.set_floor_as_origin = True
         zed.enable_positional_tracking(positional_tracking_param)
-
-    #print("Object Detection: Loading Module...")
 
     err = zed.enable_object_detection(obj_param)
     if err != sl.ERROR_CODE.SUCCESS :
@@ -85,50 +88,48 @@ def zedmain(zed_conn):
     obj_runtime_param.detection_confidence_threshold = 40
 
     shut_off = False
-    #closed = False
+    target_found = False
+    p_list = [0,0,1]
+    # position = [right to left, up and down, forward backward]
 
-    while zed.grab() == sl.ERROR_CODE.SUCCESS and not shut_off:
-        #time.sleep(0.0001)
+
+    while zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS and not shut_off:
         if zed_conn.poll():
             shut_off = zed_conn.recv()
-        err = zed.retrieve_objects(objects, obj_runtime_param)
         zed.retrieve_image(mat, sl.VIEW.LEFT)
-        if objects.is_new :
-            obj_array = objects.object_list
-            #image_data = mat.get_data()
-           # print(str(len(obj_array))+" Object(s) detected\n")
-            if len(obj_array) > 0 :
-                first_object = obj_array[0]
+        image_data = mat.get_data()
+        if zed.retrieve_objects(objects, obj_runtime_param) == sl.ERROR_CODE.SUCCESS:
+            if objects.is_new:
+                obj_array = objects.object_list
+                length = len(obj_array)
+                if length > 0: # if there are people, start sifting through them
+                    if target_found:# if we have a target locked in, start searching for them
+                        x = 0
+                        while x < length:  
+                            person = obj_array[x]
+                            x += 1
+                            personID = person.id
+                            if personID == targetID:
+                                position = person.position
+                                p_list = position.tolist() # send a sanitized list
+                                target_found = True
+                                break
+                            else:
+                                target_found = False # if we go through all the objects, and there are no targets, indicate this
+                    #if we make it through the above loop, we want to be able to choose a new person that same loop            
+                    if not target_found: # if there are objects but none of them match your target (or we simply never had a target), find a new one
+                        person = obj_array[0] # pick the closest thing as your target
+                        targetID = person.id
+                        position = person.position
+                        p_list = position.tolist()# send a sanitized list
+                        target_found = True
 
-
-                #bounding_box = first_object.bounding_box_2d
-                #cv2.rectangle(image_data, (int(bounding_box[0,0]),int(bounding_box[0,1])),
-                            #(int(bounding_box[2,0]),int(bounding_box[2,1])),
-                              #get_color_id_gr(int(first_object.id)), 3)
-
-
-
-                #print("First object attributes:")
-               # print(" Label '"+repr(first_object.label)+"' (conf. "+str(int(first_object.confidence))+"/100)")
-                #if obj_param.enable_tracking :
-                    #print(" Tracking ID: "+str(int(first_object.id))+" tracking state: "+repr(first_object.tracking_state)+" / "+repr(first_object.action_state))
-                position = first_object.position
-                #print(position)
-                p_list = position.tolist()
-                
-                list_in_cm = [p_list[0]*100, p_list[1]*100, p_list[2]*100]
-                old_list = list_in_cm
-                
-                #to catch the NAN which is apparently a float? idk its a real bother
-                #if isinstance(list_in_cm[0], float):
-                   # list_in_cm = old_list
-
-                zed_conn.send(list_in_cm)
-        #cv2.imshow("ZED", image_data)
-
-
-                
-    #cv2.destroyAllWindows()
+                else:# if there are no objects, pan and restart target search
+                    p_list = [0, 0, 0]
+                    target_found = False
+                if not math.isnan(p_list[0]):
+                    list_in_cm = [p_list[0]*100, p_list[1]*100, p_list[2]*100]
+                    zed_conn.send(list_in_cm)
 
     # Close the camera
     zed.close()
@@ -137,3 +138,4 @@ def zedmain(zed_conn):
 
 
 #zedmain()
+
