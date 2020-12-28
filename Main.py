@@ -5,7 +5,7 @@ import os
 import math
 import time
 import sys
-from zedtest import zedmain
+from Zed import zedmain
 from adafruit_servokit import ServoKit
 from command_or_passthrough import SBUSmain
 from Navigates import Navigate
